@@ -7,7 +7,7 @@
 #
 # INSTALL (usually as root)
 #   python setup.py install
-# 
+#
 # DEVELOP (build and run in place)
 #   python setup.py develop
 
@@ -37,13 +37,13 @@ def update_dirs(list1, list2):
         if v not in list1 and os.path.isdir(v):
             list1.append(v)
 
-# 
+#
 # # Function needed to make unique lists.
 def unique(list):
     ret_list = []
     dict = {}
     for item in list:
-        if not dict.has_key(item):
+        if item in dict:
             dict[item] = ''
             ret_list.append( item )
     return ret_list
@@ -80,9 +80,9 @@ def read_mapscriptvars():
 
     try:
         fp = open(mapscriptvars, "r")
-    except IOError, e:
-        raise IOError, '%s. %s' % (e, "Has MapServer been made?")
-    
+    except IOError as e:
+        raise IOError('%s. %s' % (e, "Has MapServer been made?"))
+
     output = {}
     install_dir = fp.readline().strip()
     defines = fp.readline().strip()
@@ -94,7 +94,7 @@ def read_mapscriptvars():
         version = version.split()[2]
         version = version.replace('#','')
         version = version.replace('"','')
-    
+
     output['version'] = version
     output['libs'] = libraries
     output['extra_libs'] = extra_libs
@@ -106,7 +106,7 @@ def read_mapscriptvars():
     return output
 
 def get_config(option, config='mapserver-config'):
-    
+
     v = read_mapscriptvars()
     if sys.platform == 'win32':
         v = read_mapscriptvars()
@@ -124,7 +124,7 @@ def get_config(option, config='mapserver-config'):
         if not r:
             raise Warning(p[2].readline())
     return r
-    
+
 
 class ms_ext(build_ext):
 
@@ -136,7 +136,7 @@ class ms_ext(build_ext):
     ])
 
     def initialize_options(self):
-        print "LD_RUN_PATH set"
+        print("LD_RUN_PATH set")
         os.environ["LD_RUN_PATH"] = os.getcwd()+"/../../.libs"
         build_ext.initialize_options(self)
         self.gdaldir = None
@@ -144,10 +144,10 @@ class ms_ext(build_ext):
 
     def get_compiler(self):
         return self.compiler or get_default_compiler()
-    
+
     def get_mapserver_config(self, option):
         return get_config(option, config =self.mapserver_config)
-    
+
     def finalize_options(self):
         if isinstance(self.include_dirs, str):
             self.include_dirs = [path.strip() for path in self.include_dirs.strip().split(":")]
@@ -155,7 +155,7 @@ class ms_ext(build_ext):
             self.include_dirs = include_dirs
 
         update_dirs(self.include_dirs, include_dirs)
-        
+
         includes =  self.get_mapserver_config('includes')
         includes = includes.split()
         for item in includes:
@@ -173,7 +173,7 @@ class ms_ext(build_ext):
         libs =  self.get_mapserver_config('libs')
         self.library_dirs = self.library_dirs + [x[2:] for x in libs.split() if x[:2] == "-L"]
 
-        # silly stuff to deal with setuptools doing things 
+        # silly stuff to deal with setuptools doing things
         # like -D-DMYDEFINE
         defs = self.get_mapserver_config('defines')
         self.define = [x[2:] for x in defs.split() if x[:2] == "-D"]
@@ -199,7 +199,7 @@ class ms_ext(build_ext):
                 ex_next = True
             elif x[:2] == '-F':
                 extra_link_args.append(x)
-                
+
         # don't forget to add mapserver lib
         self.libraries = unique(libraries) + ['mapserver',]
 
@@ -211,13 +211,13 @@ class ms_ext(build_ext):
             self.libraries.append('gd')
             self.libraries = unique(self.libraries)
         build_ext.finalize_options(self)
-        
+
         self.dir = os.path.abspath('../..')
         self.library_dirs.append(self.dir)
         self.include_dirs.append(self.dir)
 
 
-    
+
 mapserver_module = Extension('_mapscript',
                         sources=["mapscript_wrap.c", "pygdioctx/pygdioctx.c"],
 #                        define_macros = define_macros,
@@ -238,7 +238,7 @@ name = "MapScript"
 ext_modules = [mapserver_module,]
 py_modules = ['mapscript',]
 
-readme = file('README','rb').read()
+readme = open('README','rb').read()
 
 if not os.path.exists('mapscript_wrap.c') :
     swig_cmd = """swig -python -shadow -modern -templatereduce -fastdispatch -fvirtual -fastproxy -modernargs -castmode -dirvtable -fastinit -fastquery -noproxydel -nobuildnone %s -o mapscript_wrap.c ../mapscript.i"""
@@ -255,7 +255,7 @@ classifiers = [
         'Programming Language :: C++',
         'Topic :: Scientific/Engineering :: GIS',
         'Topic :: Scientific/Engineering :: Information Analysis',
-        
+
 ]
 
 if HAVE_SETUPTOOLS:
@@ -288,4 +288,4 @@ else:
            py_modules = py_modules,
            url=url,
            cmdclass={'build_ext':ms_ext},
-           ext_modules = ext_modules )    
+           ext_modules = ext_modules )

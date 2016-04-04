@@ -23,16 +23,25 @@
 
 /* Translate Python's built-in file object to FILE * */
 %typemap(in) FILE * {
+%#if PY_VERSION_HEX>=0x03000000
+    PyErr_SetString(PyExc_TypeError, "Cannot convert to FILE*");
+    return NULL;
+%#else
     if (!PyFile_Check($input)) {
         PyErr_SetString(PyExc_TypeError, "Input is not file");
         return NULL;
     }
     $1 = PyFile_AsFile($input);
+%#endif
 }
 
 /* To support imageObj::getBytes */
 %typemap(out) gdBuffer {
+%#if PY_VERSION_HEX>=0x03000000
+    $result = PyBytes_FromStringAndSize((const char*)$1.data, $1.size);
+%#else
     $result = PyString_FromStringAndSize((const char*)$1.data, $1.size); 
+%#endif
     if( $1.owns_data )
        msFree($1.data);
 }
@@ -121,6 +130,32 @@ CreateTupleFromDoubleArray( double *first, unsigned int size ) {
  *       print "Caught MapServerError:", msg
  *
  *************************************************************************/
+%{
+#if PY_VERSION_HEX>=0x03000000
+/* Translate Python's built-in file object to FILE * */
+static FILE* streamFromPyFile( PyObject* file )
+{
+    int fd;
+    FILE* fs;
+
+    fd = PyObject_AsFileDescriptor(file);
+    if (fd < 0)
+        return NULL;
+
+    fd = dup(fd);
+    if (fd < 0)
+        return NULL;
+
+    fs = fdopen(fd, "w");
+    if (fs == NULL)
+    {
+        close(fd);
+        return NULL;
+    }
+    return fs;
+}
+#endif
+%}
 
 %{
 PyObject *MSExc_MapServerError;
